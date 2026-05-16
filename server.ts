@@ -1,12 +1,8 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import { fileURLToPath } from "url";
 import "dotenv/config";
 import { createClient } from "@supabase/supabase-js";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const supabaseUrl = process.env.SUPABASE_URL!;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -24,7 +20,7 @@ async function startServer() {
   app.use(express.json());
 
   // API routes
-  app.get("/api/posts", async (req, res) => {
+  app.get("/api/posts", async (_req, res) => {
     const { data, error } = await supabase
       .from("posts")
       .select("*")
@@ -37,7 +33,7 @@ async function startServer() {
     res.json(data);
   });
 
-  app.get("/api/courses", async (req, res) => {
+  app.get("/api/courses", async (_req, res) => {
     const { data, error } = await supabase
       .from("courses")
       .select("*")
@@ -87,13 +83,13 @@ async function startServer() {
   } else {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
-    app.get("*", (req, res) => {
+    app.get("*", (_req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://0.0.0.0:${PORT}`);
+    console.log(`Server running on http://localhost:${PORT}`);
   });
 }
 
