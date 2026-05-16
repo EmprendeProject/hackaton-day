@@ -11,7 +11,12 @@ if (!supabaseUrl || !supabaseKey) {
   throw new Error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in environment variables");
 }
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+  }
+});
 
 async function startServer() {
   const app = express();
@@ -19,39 +24,66 @@ async function startServer() {
 
   app.use(express.json());
 
-  // Auth routes
+  // ──────────────────────────────────────────────
+  // REGISTRO
+  // ──────────────────────────────────────────────
   app.post("/api/auth/register", async (req, res) => {
     const { name, email, password, role = "student" } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ error: "Nombre, email y contraseña son requeridos" });
     }
+    if (password.length < 6) {
+      return res.status(400).json({ error: "La contraseña debe tener al menos 6 caracteres" });
+    }
 
-    const { data, error } = await supabase.auth.signUp({
+    // Usamos admin para crear el usuario SIN requerir confirmación de email
+    const { data, error } = await supabase.auth.admin.createUser({
       email,
       password,
-      options: {
-        data: { name, role }
-      }
+      email_confirm: true,          // <-- confirma el email automáticamente
+      user_metadata: { name, role }
     });
 
-    if (error) return res.status(400).json({ error: error.message });
-    if (!data.user || !data.session) {
+    if (error) {
+      if (error.message.includes("already registered") || error.message.includes("already been registered")) {
+        return res.status(400).json({ error: "Este email ya está registrado. Intenta iniciar sesión." });
+      }
+      return res.status(400).json({ error: error.message });
+    }
+    if (!data.user) {
       return res.status(400).json({ error: "No se pudo crear la cuenta" });
+    }
+
+    // Ahora hacemos sign in para obtener el token
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (signInError || !signInData.session) {
+      return res.status(201).json({
+        requiresEmailConfirmation: false,
+        message: "Cuenta creada con éxito. Ya puedes iniciar sesión.",
+        autoLogin: false
+      });
     }
 
     res.status(201).json({
       user: {
         id: data.user.id,
-        name: data.user.user_metadata.name,
+        name: data.user.user_metadata.name ?? name,
         email: data.user.email!,
-        role: data.user.user_metadata.role,
+        role: data.user.user_metadata.role ?? role,
         avatar: `https://i.pravatar.cc/150?u=${data.user.id}`
       },
-      token: data.session.access_token
+      token: signInData.session.access_token
     });
   });
 
+  // ──────────────────────────────────────────────
+  // LOGIN
+  // ──────────────────────────────────────────────
   app.post("/api/auth/login", async (req, res) => {
     const { email, password } = req.body;
 
@@ -61,7 +93,15 @@ async function startServer() {
 
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
-    if (error) return res.status(401).json({ error: "Credenciales incorrectas" });
+    if (error) {
+      if (error.message.includes("Email not confirmed")) {
+        return res.status(401).json({ error: "Debes confirmar tu email antes de iniciar sesión." });
+      }
+      if (error.message.includes("Invalid login credentials")) {
+        return res.status(401).json({ error: "Email o contraseña incorrectos." });
+      }
+      return res.status(401).json({ error: error.message });
+    }
 
     res.json({
       user: {
@@ -75,7 +115,9 @@ async function startServer() {
     });
   });
 
-  // API routes
+  // ──────────────────────────────────────────────
+  // POSTS
+  // ──────────────────────────────────────────────
   app.get("/api/posts", async (_req, res) => {
     const { data, error } = await supabase
       .from("posts")
@@ -86,38 +128,25 @@ async function startServer() {
       console.error("Error fetching posts:", error.message);
       return res.status(500).json({ error: error.message });
     }
-    res.json(data);
-  });
-
-  app.get("/api/courses", async (_req, res) => {
-    const { data, error } = await supabase
-      .from("courses")
-      .select("*")
-      .order("created_at", { ascending: true });
-
-    if (error) {
-      console.error("Error fetching courses:", error.message);
-      return res.status(500).json({ error: error.message });
-    }
-    res.json(data);
+    res.json(data ?? []);
   });
 
   app.post("/api/posts", async (req, res) => {
-    const { content } = req.body;
+    const { content, author, avatar } = req.body;
 
     if (!content || typeof content !== "string" || content.trim() === "") {
-      return res.status(400).json({ error: "Content is required" });
+      return res.status(400).json({ error: "El contenido es requerido" });
     }
 
     const { data, error } = await supabase
       .from("posts")
       .insert({
-        author: "Current User",
-        role: "Member",
+        author: author ?? "Anónimo",
+        role: "Estudiante",
         content: content.trim(),
         likes: 0,
         comments: 0,
-        avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&h=150&fit=crop"
+        avatar: avatar ?? `https://i.pravatar.cc/150?u=${Date.now()}`
       })
       .select()
       .single();
@@ -129,7 +158,25 @@ async function startServer() {
     res.status(201).json(data);
   });
 
-  // Vite middleware for development
+  // ──────────────────────────────────────────────
+  // COURSES
+  // ──────────────────────────────────────────────
+  app.get("/api/courses", async (_req, res) => {
+    const { data, error } = await supabase
+      .from("courses")
+      .select("*")
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.error("Error fetching courses:", error.message);
+      return res.status(500).json({ error: error.message });
+    }
+    res.json(data ?? []);
+  });
+
+  // ──────────────────────────────────────────────
+  // VITE / STATIC
+  // ──────────────────────────────────────────────
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -145,7 +192,7 @@ async function startServer() {
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`✅ Server running on http://localhost:${PORT}`);
   });
 }
 

@@ -13,6 +13,7 @@ export default function Register({ onGoToLogin }: RegisterProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -22,6 +23,7 @@ export default function Register({ onGoToLogin }: RegisterProps) {
       return;
     }
     setError("");
+    setSuccess("");
     setIsLoading(true);
     try {
       const res = await fetch("/api/auth/register", {
@@ -34,7 +36,14 @@ export default function Register({ onGoToLogin }: RegisterProps) {
         setError(data.error || "Error al crear la cuenta");
         return;
       }
-      login(data.user, data.token);
+      // Si hay usuario y token → auto-login directo
+      if (data.user && data.token) {
+        login(data.user, data.token);
+        return;
+      }
+      // Cuenta creada pero sin sesión automática → ir a login
+      setSuccess("¡Cuenta creada! Ahora inicia sesión con tus credenciales.");
+      setTimeout(() => onGoToLogin(), 2000);
     } catch {
       setError("Error de conexión. Intenta de nuevo.");
     } finally {
@@ -106,6 +115,16 @@ export default function Register({ onGoToLogin }: RegisterProps) {
                 className="text-sm text-red-500 font-medium bg-red-50 px-4 py-3 rounded-xl"
               >
                 {error}
+              </motion.p>
+            )}
+
+            {success && (
+              <motion.p
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-sm text-green-600 font-medium bg-green-50 px-4 py-3 rounded-xl"
+              >
+                {success}
               </motion.p>
             )}
 
