@@ -133,6 +133,12 @@ async function startServer() {
       return res.status(400).json({ error: error.message });
     }
 
+    // Propagate name/avatar to all posts and comments by this user
+    await Promise.all([
+      supabase.from("posts").update({ author: name, avatar }).eq("user_id", id),
+      supabase.from("post_comments").update({ author: name, avatar }).eq("user_id", id),
+    ]);
+
     res.json({
       user: {
         id: data.user.id,
@@ -176,7 +182,7 @@ async function startServer() {
   });
 
   app.post("/api/posts", async (req, res) => {
-    const { content, author, avatar } = req.body;
+    const { content, author, avatar, userId } = req.body;
 
     if (!content || typeof content !== "string" || content.trim() === "") {
       return res.status(400).json({ error: "El contenido es requerido" });
@@ -185,6 +191,7 @@ async function startServer() {
     const { data, error } = await supabase
       .from("posts")
       .insert({
+        user_id: userId ?? null,
         author: author ?? "Anónimo",
         role: "Estudiante",
         content: content.trim(),
@@ -252,13 +259,13 @@ async function startServer() {
 
   app.post("/api/posts/:id/comments", async (req, res) => {
     const { id } = req.params;
-    const { content, author, avatar } = req.body;
+    const { content, author, avatar, userId } = req.body;
 
     if (!content?.trim()) return res.status(400).json({ error: "Contenido requerido" });
 
     const { data, error } = await supabase
       .from("post_comments")
-      .insert({ post_id: id, content: content.trim(), author: author ?? "Anónimo", avatar })
+      .insert({ post_id: id, user_id: userId ?? null, content: content.trim(), author: author ?? "Anónimo", avatar })
       .select()
       .single();
 
