@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Mail, Lock, ArrowRight, Github } from "lucide-react";
 import { motion } from "motion/react";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../../context/AuthContext";
 
 interface LoginProps {
   onGoToRegister: () => void;
@@ -44,7 +44,7 @@ export default function Login({ onGoToRegister }: LoginProps) {
         animate={{ opacity: 1, scale: 1 }}
         className="w-full max-w-[1000px] grid grid-cols-1 md:grid-cols-12 gap-6"
       >
-        {/* Left Side: Branding/Welcome Cell */}
+        {/* Left Side: Branding */}
         <div className="md:col-span-7 bg-slate-900 rounded-[2.5rem] p-12 text-white relative overflow-hidden flex flex-col justify-between min-h-[400px]">
           <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/20 to-transparent"></div>
           <div className="absolute -top-24 -left-24 w-64 h-64 bg-indigo-600/10 rounded-full blur-3xl"></div>
@@ -57,20 +57,24 @@ export default function Login({ onGoToRegister }: LoginProps) {
               <span className="font-bold text-2xl tracking-tight">EduHub</span>
             </div>
             <h1 className="text-5xl font-black mb-6 leading-[1.1] tracking-tight">Vuelve a tu<br />comunidad.</h1>
-            <p className="text-slate-400 text-lg font-medium max-w-sm">Conecta con expertos, aprende nuevas habilidades y comparte tu progreso.</p>
+            <p className="text-slate-400 text-lg font-medium max-w-sm">
+              Conecta con expertos, aprende nuevas habilidades y comparte tu progreso.
+            </p>
           </div>
 
           <div className="relative z-10 flex -space-x-3 mt-12">
-            {[1, 2, 3, 4].map(i => (
+            {[1, 2, 3, 4].map((i) => (
               <div key={i} className="w-12 h-12 rounded-full border-4 border-slate-900 bg-slate-800 shadow-sm overflow-hidden">
                 <img src={`https://i.pravatar.cc/100?u=auth${i}`} alt="user" />
               </div>
             ))}
-            <div className="w-12 h-12 rounded-full border-4 border-slate-900 bg-indigo-600 text-[10px] flex items-center justify-center font-bold text-white shadow-sm">+2k</div>
+            <div className="w-12 h-12 rounded-full border-4 border-slate-900 bg-indigo-600 text-[10px] flex items-center justify-center font-bold text-white shadow-sm">
+              +2k
+            </div>
           </div>
         </div>
 
-        {/* Right Side: Form Cell */}
+        {/* Right Side: Form */}
         <div className="md:col-span-5 bg-white rounded-[2.5rem] p-10 border border-slate-200 shadow-sm flex flex-col justify-center">
           <h2 className="text-2xl font-black text-slate-900 mb-8">Iniciar Sesión</h2>
 
@@ -133,13 +137,9 @@ export default function Login({ onGoToRegister }: LoginProps) {
             <button className="w-full flex items-center justify-center gap-3 py-3 border-2 border-slate-100 rounded-2xl font-bold text-slate-600 hover:bg-slate-50 transition-colors">
               <Github size={20} /> Github
             </button>
-
             <p className="mt-8 text-sm font-medium text-slate-500">
               ¿No tienes cuenta?{" "}
-              <button
-                onClick={onGoToRegister}
-                className="text-indigo-600 font-bold hover:underline"
-              >
+              <button onClick={onGoToRegister} className="text-indigo-600 font-bold hover:underline">
                 Regístrate gratis
               </button>
             </p>

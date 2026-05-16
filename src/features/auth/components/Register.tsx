@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Mail, Lock, User, Sparkles } from "lucide-react";
 import { motion } from "motion/react";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../../context/AuthContext";
 
 interface RegisterProps {
   onGoToLogin: () => void;
@@ -13,7 +13,6 @@ export default function Register({ onGoToLogin }: RegisterProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -23,7 +22,6 @@ export default function Register({ onGoToLogin }: RegisterProps) {
       return;
     }
     setError("");
-    setSuccess("");
     setIsLoading(true);
     try {
       const res = await fetch("/api/auth/register", {
@@ -36,14 +34,7 @@ export default function Register({ onGoToLogin }: RegisterProps) {
         setError(data.error || "Error al crear la cuenta");
         return;
       }
-      // Si hay usuario y token → auto-login directo
-      if (data.user && data.token) {
-        login(data.user, data.token);
-        return;
-      }
-      // Cuenta creada pero sin sesión automática → ir a login
-      setSuccess("¡Cuenta creada! Ahora inicia sesión con tus credenciales.");
-      setTimeout(() => onGoToLogin(), 2000);
+      login(data.user, data.token);
     } catch {
       setError("Error de conexión. Intenta de nuevo.");
     } finally {
@@ -58,7 +49,7 @@ export default function Register({ onGoToLogin }: RegisterProps) {
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-[1000px] grid grid-cols-1 md:grid-cols-12 gap-6"
       >
-        {/* Left Side: Form Cell */}
+        {/* Left Side: Form */}
         <div className="md:col-span-5 bg-white rounded-[2.5rem] p-10 border border-slate-200 shadow-sm flex flex-col justify-center order-2 md:order-1">
           <h2 className="text-2xl font-black text-slate-900 mb-8">Crea tu cuenta</h2>
 
@@ -118,16 +109,6 @@ export default function Register({ onGoToLogin }: RegisterProps) {
               </motion.p>
             )}
 
-            {success && (
-              <motion.p
-                initial={{ opacity: 0, y: -6 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-sm text-green-600 font-medium bg-green-50 px-4 py-3 rounded-xl"
-              >
-                {success}
-              </motion.p>
-            )}
-
             <button
               type="submit"
               disabled={isLoading}
@@ -144,17 +125,14 @@ export default function Register({ onGoToLogin }: RegisterProps) {
           <div className="mt-8 pt-8 border-t border-slate-100">
             <p className="text-center text-sm font-medium text-slate-500">
               ¿Ya tienes cuenta?{" "}
-              <button
-                onClick={onGoToLogin}
-                className="text-indigo-600 font-bold hover:underline"
-              >
+              <button onClick={onGoToLogin} className="text-indigo-600 font-bold hover:underline">
                 Inicia Sesión
               </button>
             </p>
           </div>
         </div>
 
-        {/* Right Side: Features Cell */}
+        {/* Right Side: Features */}
         <div className="md:col-span-7 bg-indigo-600 rounded-[2.5rem] p-12 text-white relative overflow-hidden flex flex-col justify-between min-h-[400px] order-1 md:order-2">
           <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent"></div>
           <div className="relative z-10">
@@ -162,7 +140,6 @@ export default function Register({ onGoToLogin }: RegisterProps) {
               Únete a la élite
             </div>
             <h1 className="text-5xl font-black mb-8 leading-[1.1] tracking-tight">Comienza tu viaje de aprendizaje.</h1>
-
             <div className="space-y-6">
               {[
                 { title: "Acceso Ilimitado", desc: "Más de 500 módulos de alta calidad." },
@@ -181,9 +158,10 @@ export default function Register({ onGoToLogin }: RegisterProps) {
               ))}
             </div>
           </div>
-
           <div className="relative z-10 pt-12">
-            <p className="text-indigo-200 text-sm font-bold italic opacity-60">"La mejor inversión que puedes hacer es en ti mismo."</p>
+            <p className="text-indigo-200 text-sm font-bold italic opacity-60">
+              "La mejor inversión que puedes hacer es en ti mismo."
+            </p>
           </div>
         </div>
       </motion.div>

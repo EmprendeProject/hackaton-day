@@ -1,18 +1,13 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
-import React, { useState, useEffect } from "react";
-import Layout from "./components/layout/Layout.tsx";
-import PostFeed from "./components/muro/PostFeed.tsx";
-import Classroom from "./components/classroom/Classroom.tsx";
-import Profile from "./components/profile/Profile.tsx";
-import Login from "./components/auth/login.tsx";
-import Register from "./components/auth/register.tsx";
-import { Post, Course, View } from "./types.ts";
-import { motion, AnimatePresence } from "motion/react";
-import { useAuth } from "./context/AuthContext.tsx";
+import React, { useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { useAuth } from "./context/AuthContext";
+import Layout from "./shared/layout/Layout";
+import Login from "./features/auth/components/Login";
+import Register from "./features/auth/components/Register";
+import PostFeed from "./features/muro/components/PostFeed";
+import Classroom from "./features/classroom/components/Classroom";
+import Profile from "./features/profile/components/Profile";
+import { View } from "./types";
 
 type AuthScreen = "login" | "register";
 
@@ -35,71 +30,26 @@ function AuthGate() {
 }
 
 function MainApp() {
-  const { logout, user } = useAuth();
+  const { logout } = useAuth();
   const [view, setView] = useState<View>("muro");
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [postsRes, coursesRes] = await Promise.all([
-          fetch("/api/posts"),
-          fetch("/api/courses"),
-        ]);
-        const postsData = await postsRes.json();
-        const coursesData = await coursesRes.json();
-        setPosts(postsData);
-        setCourses(coursesData);
-      } catch (error) {
-        console.error("Failed to fetch data:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
-
-  const handleCreatePost = async (content: string) => {
-    try {
-      const res = await fetch("/api/posts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content, author: user?.name }),
-      });
-      const newPost = await res.json();
-      setPosts([newPost, ...posts]);
-    } catch (error) {
-      console.error("Failed to create post:", error);
-    }
-  };
 
   const renderView = () => {
-    if (isLoading) {
-      return (
-        <div className="flex items-center justify-center min-h-[50vh]">
-          <div className="w-8 h-8 border-4 border-[#3525cd] border-t-transparent rounded-full animate-spin"></div>
-        </div>
-      );
-    }
-
     switch (view) {
       case "muro":
-        return <PostFeed posts={posts} onCreatePost={handleCreatePost} />;
+        return <PostFeed />;
       case "classroom":
-        return <Classroom courses={courses} />;
+        return <Classroom />;
       case "profile":
         return <Profile />;
       case "explore":
         return (
           <div className="text-center py-20">
-            <h2 className="text-2xl font-bold text-[#131b2e]">Exploring Communities...</h2>
-            <p className="text-[#464555] mt-2 italic">Feature coming soon in the next update!</p>
+            <h2 className="text-2xl font-bold text-[#131b2e]">Explorando comunidades...</h2>
+            <p className="text-[#464555] mt-2 italic">Feature coming soon!</p>
           </div>
         );
       default:
-        return <PostFeed posts={posts} onCreatePost={handleCreatePost} />;
+        return <PostFeed />;
     }
   };
 

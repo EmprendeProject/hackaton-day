@@ -12,6 +12,7 @@ interface LayoutProps {
 
 export default function Layout({ children, activeView, onViewChange, onLogout }: LayoutProps) {
   const { user } = useAuth();
+
   return (
     <div className="flex min-h-screen bg-brand-background text-brand-text-main overflow-hidden">
       {/* Sidebar - Persistent on Desktop */}
@@ -46,7 +47,10 @@ export default function Layout({ children, activeView, onViewChange, onLogout }:
         </nav>
 
         <div className="pt-8 border-t border-brand-border">
-          <div className="flex items-center space-x-4 mb-6 p-2 rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => onViewChange("profile")}>
+          <div
+            className="flex items-center space-x-4 mb-6 p-2 rounded-2xl hover:bg-slate-50 transition-colors cursor-pointer"
+            onClick={() => onViewChange("profile")}
+          >
             <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-500 border-2 border-white shadow-md overflow-hidden">
               <img
                 src={user?.avatar ?? "https://i.pravatar.cc/100?u=default"}
@@ -70,7 +74,7 @@ export default function Layout({ children, activeView, onViewChange, onLogout }:
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col h-screen overflow-hidden">
-        {/* Top Header Mobile/Desktop */}
+        {/* Top Header Mobile */}
         <header className="lg:hidden h-16 bg-white border-b border-brand-border px-6 flex items-center justify-between flex-shrink-0">
           <div className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-brand-primary rounded-lg flex items-center justify-center">
