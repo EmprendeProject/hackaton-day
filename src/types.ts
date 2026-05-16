@@ -25,3 +25,12 @@ export interface Course {
 }
 
 export type View = "muro" | "classroom" | "profile" | "explore";
+
+export interface Comment {
+  id: string;
+  post_id: string;
+  author: string;
+  avatar: string;
+  content: string;
+  created_at: string;
+}

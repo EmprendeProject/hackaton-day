@@ -159,6 +159,78 @@ async function startServer() {
   });
 
   // ──────────────────────────────────────────────
+  // LIKES
+  // ──────────────────────────────────────────────
+  app.post("/api/posts/:id/like", async (req, res) => {
+    const { id } = req.params;
+    const { userId } = req.body;
+
+    if (!userId) return res.status(400).json({ error: "userId requerido" });
+
+    const { data: existing } = await supabase
+      .from("post_likes")
+      .select("id")
+      .eq("post_id", id)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (existing) {
+      await supabase.from("post_likes").delete().eq("id", existing.id);
+    } else {
+      await supabase.from("post_likes").insert({ post_id: id, user_id: userId });
+    }
+
+    const { count } = await supabase
+      .from("post_likes")
+      .select("*", { count: "exact", head: true })
+      .eq("post_id", id);
+
+    await supabase.from("posts").update({ likes: count ?? 0 }).eq("id", id);
+
+    res.json({ liked: !existing, likes: count ?? 0 });
+  });
+
+  // ──────────────────────────────────────────────
+  // COMMENTS
+  // ──────────────────────────────────────────────
+  app.get("/api/posts/:id/comments", async (req, res) => {
+    const { id } = req.params;
+
+    const { data, error } = await supabase
+      .from("post_comments")
+      .select("*")
+      .eq("post_id", id)
+      .order("created_at", { ascending: true });
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.json(data ?? []);
+  });
+
+  app.post("/api/posts/:id/comments", async (req, res) => {
+    const { id } = req.params;
+    const { content, author, avatar } = req.body;
+
+    if (!content?.trim()) return res.status(400).json({ error: "Contenido requerido" });
+
+    const { data, error } = await supabase
+      .from("post_comments")
+      .insert({ post_id: id, content: content.trim(), author: author ?? "Anónimo", avatar })
+      .select()
+      .single();
+
+    if (error) return res.status(500).json({ error: error.message });
+
+    const { count } = await supabase
+      .from("post_comments")
+      .select("*", { count: "exact", head: true })
+      .eq("post_id", id);
+
+    await supabase.from("posts").update({ comments: count ?? 0 }).eq("id", id);
+
+    res.status(201).json(data);
+  });
+
+  // ──────────────────────────────────────────────
   // COURSES
   // ──────────────────────────────────────────────
   app.get("/api/courses", async (_req, res) => {
