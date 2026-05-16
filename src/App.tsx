@@ -8,10 +8,34 @@ import Layout from "./components/layout/Layout.tsx";
 import PostFeed from "./components/muro/PostFeed.tsx";
 import Classroom from "./components/classroom/Classroom.tsx";
 import Profile from "./components/profile/Profile.tsx";
+import Login from "./components/auth/login.tsx";
+import Register from "./components/auth/register.tsx";
 import { Post, Course, View } from "./types.ts";
 import { motion, AnimatePresence } from "motion/react";
+import { useAuth } from "./context/AuthContext.tsx";
 
-export default function App() {
+type AuthScreen = "login" | "register";
+
+function AuthGate() {
+  const [authScreen, setAuthScreen] = useState<AuthScreen>("login");
+
+  return (
+    <AnimatePresence mode="wait">
+      {authScreen === "login" ? (
+        <motion.div key="login" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <Login onGoToRegister={() => setAuthScreen("register")} />
+        </motion.div>
+      ) : (
+        <motion.div key="register" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <Register onGoToLogin={() => setAuthScreen("login")} />
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+function MainApp() {
+  const { logout, user } = useAuth();
   const [view, setView] = useState<View>("muro");
   const [posts, setPosts] = useState<Post[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
@@ -22,7 +46,7 @@ export default function App() {
       try {
         const [postsRes, coursesRes] = await Promise.all([
           fetch("/api/posts"),
-          fetch("/api/courses")
+          fetch("/api/courses"),
         ]);
         const postsData = await postsRes.json();
         const coursesData = await coursesRes.json();
@@ -42,7 +66,7 @@ export default function App() {
       const res = await fetch("/api/posts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content })
+        body: JSON.stringify({ content, author: user?.name }),
       });
       const newPost = await res.json();
       setPosts([newPost, ...posts]);
@@ -80,7 +104,7 @@ export default function App() {
   };
 
   return (
-    <Layout activeView={view} onViewChange={setView}>
+    <Layout activeView={view} onViewChange={setView} onLogout={logout}>
       <AnimatePresence mode="wait">
         <motion.div
           key={view}
@@ -94,4 +118,9 @@ export default function App() {
       </AnimatePresence>
     </Layout>
   );
+}
+
+export default function App() {
+  const { isAuthenticated } = useAuth();
+  return isAuthenticated ? <MainApp /> : <AuthGate />;
 }
