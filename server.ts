@@ -1,6 +1,5 @@
 import express from "express";
 import path from "path";
-import { createServer as createViteServer } from "vite";
 import "dotenv/config";
 import { createClient } from "@supabase/supabase-js";
 
@@ -346,13 +345,15 @@ app.use(express.json({ limit: "5mb" }));
   // VITE / STATIC
   // ──────────────────────────────────────────────
   if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
-    createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    }).then((vite) => {
-      app.use(vite.middlewares);
-      app.listen(PORT, "0.0.0.0", () => {
-        console.log(`✅ Server running on http://localhost:${PORT}`);
+    import("vite").then(({ createServer: createViteServer }) => {
+      createViteServer({
+        server: { middlewareMode: true },
+        appType: "spa",
+      }).then((vite) => {
+        app.use(vite.middlewares);
+        app.listen(PORT, "0.0.0.0", () => {
+          console.log(`✅ Server running on http://localhost:${PORT}`);
+        });
       });
     });
   } else if (!process.env.VERCEL) {
