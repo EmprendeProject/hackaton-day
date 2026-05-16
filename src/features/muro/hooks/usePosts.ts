@@ -10,8 +10,17 @@ export function usePosts() {
   useEffect(() => {
     fetch("/api/posts")
       .then((r) => r.json())
-      .then(setPosts)
-      .catch(console.error)
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setPosts(data);
+        } else {
+          setPosts([]);
+        }
+      })
+      .catch((err) => {
+        console.error(err);
+        setPosts([]);
+      })
       .finally(() => setIsLoading(false));
   }, []);
 

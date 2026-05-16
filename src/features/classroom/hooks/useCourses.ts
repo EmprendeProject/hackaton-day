@@ -8,8 +8,17 @@ export function useCourses() {
   useEffect(() => {
     fetch("/api/courses")
       .then((r) => r.json())
-      .then(setCourses)
-      .catch(console.error)
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setCourses(data);
+        } else {
+          setCourses([]);
+        }
+      })
+      .catch((err) => {
+        console.error(err);
+        setCourses([]);
+      })
       .finally(() => setIsLoading(false));
   }, []);
 
