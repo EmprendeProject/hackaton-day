@@ -21,7 +21,7 @@ export default function Layout({ children, activeView, onViewChange, onLogout }:
           <div className="w-10 h-10 bg-brand-primary rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200 transition-transform group-hover:scale-110">
             <div className="w-4 h-4 bg-white rounded-full"></div>
           </div>
-          <span className="font-bold text-2xl tracking-tight">EduHub</span>
+          <span className="font-bold text-2xl tracking-tight">Emprende Más</span>
         </div>
 
         <nav className="flex-1 space-y-3">
@@ -80,7 +80,7 @@ export default function Layout({ children, activeView, onViewChange, onLogout }:
             <div className="w-8 h-8 bg-brand-primary rounded-lg flex items-center justify-center">
               <div className="w-3 h-3 bg-white rounded-full"></div>
             </div>
-            <span className="font-bold text-lg tracking-tight">EduHub</span>
+            <span className="font-bold text-lg tracking-tight">Emprende Más</span>
           </div>
           <div className="flex items-center gap-2">
             <button className="p-2 text-brand-text-muted hover:bg-slate-100 rounded-full">

@@ -1,5 +1,5 @@
 {
-  "name": "EduCommunity",
+  "name": "Emprende Más",
   "description": "A premium community platform for members featuring a social wall, exclusive courses in a classroom, and personalized profiles.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
