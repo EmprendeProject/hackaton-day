@@ -116,6 +116,36 @@ async function startServer() {
   });
 
   // ──────────────────────────────────────────────
+  // PROFILE
+  // ──────────────────────────────────────────────
+  app.put("/api/auth/profile", async (req, res) => {
+    const { id, name, avatar, bio } = req.body;
+
+    if (!id) {
+      return res.status(400).json({ error: "User ID is required" });
+    }
+
+    const { data, error } = await supabase.auth.admin.updateUserById(id, {
+      user_metadata: { name, avatar, bio }
+    });
+
+    if (error) {
+      return res.status(400).json({ error: error.message });
+    }
+
+    res.json({
+      user: {
+        id: data.user.id,
+        name: data.user.user_metadata.name ?? data.user.email!.split("@")[0],
+        email: data.user.email!,
+        role: data.user.user_metadata.role ?? "student",
+        avatar: data.user.user_metadata.avatar ?? `https://i.pravatar.cc/150?u=${data.user.id}`,
+        bio: data.user.user_metadata.bio ?? ""
+      }
+    });
+  });
+
+  // ──────────────────────────────────────────────
   // POSTS
   // ──────────────────────────────────────────────
   app.get("/api/posts", async (req, res) => {

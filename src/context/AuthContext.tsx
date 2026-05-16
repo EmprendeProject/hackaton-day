@@ -6,6 +6,7 @@ export interface User {
   email: string;
   role: string;
   avatar: string;
+  bio?: string;
 }
 
 interface AuthContextType {
@@ -13,6 +14,7 @@ interface AuthContextType {
   token: string | null;
   login: (user: User, token: string) => void;
   logout: () => void;
+  updateUser: (user: User) => void;
   isAuthenticated: boolean;
 }
 
@@ -41,9 +43,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("edu_token");
   };
 
+  const updateUser = (userData: User) => {
+    setUser(userData);
+    localStorage.setItem("edu_user", JSON.stringify(userData));
+  };
+
   return (
     <AuthContext.Provider
-      value={{ user, token, login, logout, isAuthenticated: !!user }}
+      value={{ user, token, login, logout, updateUser, isAuthenticated: !!user }}
     >
       {children}
     </AuthContext.Provider>

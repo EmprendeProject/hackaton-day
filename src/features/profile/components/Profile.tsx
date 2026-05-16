@@ -1,10 +1,17 @@
-import React from "react";
-import { Award, BookOpen, Flame, Settings, Edit3, Zap, Calendar } from "lucide-react";
+import React, { useState } from "react";
+import { Award, BookOpen, Flame, Settings, Edit3, Zap, Calendar, Save, X } from "lucide-react";
 import { motion } from "motion/react";
 import { useAuth } from "../../../context/AuthContext";
 
 export default function Profile() {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: user?.name || "",
+    avatar: user?.avatar || "",
+    bio: user?.bio || ""
+  });
+  const [isSaving, setIsSaving] = useState(false);
 
   const stats = [
     { label: "Puntos", value: "2.4k", icon: <Zap size={20} />, color: "bg-indigo-600 shadow-indigo-200" },
@@ -12,6 +19,33 @@ export default function Profile() {
     { label: "Días", value: "12", icon: <Flame size={20} />, color: "bg-orange-500 shadow-orange-200" },
     { label: "Rango", value: "Oro", icon: <Award size={20} />, color: "bg-amber-500 shadow-amber-200" },
   ];
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const res = await fetch("/api/auth/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: user?.id,
+          name: editForm.name,
+          avatar: editForm.avatar,
+          bio: editForm.bio
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        updateUser(data.user);
+        setIsEditing(false);
+      } else {
+        console.error("Failed to update profile");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-6">
@@ -22,7 +56,7 @@ export default function Profile() {
         <div className="relative z-10">
           <div className="w-40 h-40 rounded-[2.5rem] overflow-hidden border-8 border-slate-50 shadow-2xl rotate-3 hover:rotate-0 transition-all duration-500 ring-1 ring-slate-200">
             <img
-              src={user?.avatar ?? "https://i.pravatar.cc/400?u=default"}
+              src={isEditing ? editForm.avatar || "https://i.pravatar.cc/400?u=default" : user?.avatar ?? "https://i.pravatar.cc/400?u=default"}
               alt={user?.name ?? "Perfil"}
               className="w-full h-full object-cover"
             />
@@ -32,23 +66,88 @@ export default function Profile() {
           </div>
         </div>
 
-        <div className="relative z-10 flex-1 text-center md:text-left">
-          <div className="flex flex-col md:flex-row md:items-center gap-3 mb-4 justify-center md:justify-start">
-            <h2 className="text-4xl font-black text-slate-900 tracking-tight">{user?.name ?? "Usuario"}</h2>
-            <span className="inline-block px-4 py-1 bg-indigo-50 text-indigo-600 text-[10px] font-black rounded-full uppercase tracking-[0.2em]">
-              {user?.role ?? "member"}
-            </span>
-          </div>
-          <p className="text-slate-500 font-medium leading-relaxed max-w-md mb-8">{user?.email}</p>
+        <div className="relative z-10 flex-1 text-center md:text-left w-full">
+          {isEditing ? (
+            <div className="space-y-4 text-left w-full max-w-sm mx-auto md:mx-0">
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Nombre Público</label>
+                <input 
+                  type="text" 
+                  value={editForm.name} 
+                  onChange={(e) => setEditForm({...editForm, name: e.target.value})}
+                  className="w-full mt-1 bg-slate-50 border-2 border-transparent focus:border-indigo-100 focus:bg-white rounded-xl py-2 px-4 text-sm font-bold transition-all outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">URL de Imagen</label>
+                <input 
+                  type="text" 
+                  value={editForm.avatar} 
+                  onChange={(e) => setEditForm({...editForm, avatar: e.target.value})}
+                  className="w-full mt-1 bg-slate-50 border-2 border-transparent focus:border-indigo-100 focus:bg-white rounded-xl py-2 px-4 text-sm font-medium transition-all outline-none"
+                  placeholder="https://..."
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Descripción / Bio</label>
+                <textarea 
+                  value={editForm.bio} 
+                  onChange={(e) => setEditForm({...editForm, bio: e.target.value})}
+                  className="w-full mt-1 bg-slate-50 border-2 border-transparent focus:border-indigo-100 focus:bg-white rounded-xl py-2 px-4 text-sm font-medium transition-all outline-none resize-none"
+                  rows={2}
+                  placeholder="Cuéntanos sobre ti..."
+                />
+              </div>
+              
+              <div className="flex gap-3 pt-2">
+                <button 
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all disabled:opacity-50"
+                >
+                  {isSaving ? "Guardando..." : <><Save size={16} /> Guardar</>}
+                </button>
+                <button 
+                  onClick={() => {
+                    setIsEditing(false);
+                    setEditForm({ name: user?.name || "", avatar: user?.avatar || "", bio: user?.bio || "" });
+                  }}
+                  className="px-4 py-3 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-all"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex flex-col md:flex-row md:items-center gap-3 mb-2 justify-center md:justify-start">
+                <h2 className="text-4xl font-black text-slate-900 tracking-tight">{user?.name ?? "Usuario"}</h2>
+                <span className="inline-block px-4 py-1 bg-indigo-50 text-indigo-600 text-[10px] font-black rounded-full uppercase tracking-[0.2em]">
+                  {user?.role ?? "member"}
+                </span>
+              </div>
+              <p className="text-slate-500 font-medium text-sm leading-relaxed max-w-md mb-2">{user?.email}</p>
+              
+              {user?.bio && (
+                <p className="text-slate-700 font-medium leading-relaxed max-w-md mb-6 italic border-l-4 border-indigo-200 pl-4 py-1">
+                  "{user.bio}"
+                </p>
+              )}
+              {!user?.bio && <div className="mb-6"></div>}
 
-          <div className="flex flex-wrap justify-center md:justify-start gap-3">
-            <button className="flex items-center gap-2 px-8 py-3 bg-slate-900 text-white font-bold rounded-2xl hover:scale-105 transition-all shadow-xl shadow-slate-200">
-              <Edit3 size={18} /> Editar Perfil
-            </button>
-            <button className="flex items-center gap-2 px-8 py-3 bg-white border-2 border-slate-100 text-slate-600 font-bold rounded-2xl hover:bg-slate-50 transition-all">
-              <Settings size={18} />
-            </button>
-          </div>
+              <div className="flex flex-wrap justify-center md:justify-start gap-3">
+                <button 
+                  onClick={() => setIsEditing(true)}
+                  className="flex items-center gap-2 px-8 py-3 bg-slate-900 text-white font-bold rounded-2xl hover:scale-105 transition-all shadow-xl shadow-slate-200"
+                >
+                  <Edit3 size={18} /> Editar Perfil
+                </button>
+                <button className="flex items-center gap-2 px-8 py-3 bg-white border-2 border-slate-100 text-slate-600 font-bold rounded-2xl hover:bg-slate-50 transition-all">
+                  <Settings size={18} />
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
