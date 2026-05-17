@@ -107,7 +107,8 @@ app.use(express.json({ limit: "5mb" }));
         name: data.user.user_metadata.name ?? data.user.email!.split("@")[0],
         email: data.user.email!,
         role: data.user.user_metadata.role ?? "student",
-        avatar: `https://i.pravatar.cc/150?u=${data.user.id}`
+        avatar: data.user.user_metadata.avatar ?? `https://i.pravatar.cc/150?u=${data.user.id}`,
+        bio: data.user.user_metadata.bio ?? ""
       },
       token: data.session.access_token
     });
