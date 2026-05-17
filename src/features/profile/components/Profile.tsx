@@ -13,6 +13,7 @@ export default function Profile() {
   });
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [uploadedAvatarUrl, setUploadedAvatarUrl] = useState<string | null>(null);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -33,6 +34,9 @@ export default function Profile() {
         ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
         const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
 
+        // Mostrar preview local inmediatamente
+        setEditForm((prev) => ({ ...prev, avatar: dataUrl }));
+
         fetch("/api/auth/avatar", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -40,7 +44,8 @@ export default function Profile() {
         })
           .then((res) => res.json())
           .then((data) => {
-            if (data.url) setEditForm((prev) => ({ ...prev, avatar: data.url }));
+            // Guardar la URL de Supabase por separado, sin tocar el preview
+            if (data.url) setUploadedAvatarUrl(data.url);
           })
           .catch(console.error)
           .finally(() => setIsUploadingImage(false));
@@ -66,7 +71,7 @@ export default function Profile() {
         body: JSON.stringify({
           id: user?.id,
           name: editForm.name,
-          avatar: editForm.avatar,
+          avatar: uploadedAvatarUrl ?? editForm.avatar,
           bio: editForm.bio
         })
       });

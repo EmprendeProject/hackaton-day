@@ -130,25 +130,27 @@ app.use(express.json({ limit: "5mb" }));
       return res.status(400).json({ error: "Formato de imagen inválido" });
     }
 
-    const contentType = matches[1];
     const base64Data = matches[2];
     const buffer = Buffer.from(base64Data, "base64");
-    const extension = contentType.split("/")[1] || "jpg";
-    const filePath = `${userId}/avatar.${extension}`;
+    const filePath = `avatar-${userId}.jpg`;
 
     const { error: uploadError } = await supabase.storage
       .from("Avatars")
-      .upload(filePath, buffer, { contentType, upsert: true });
+      .upload(filePath, buffer, { contentType: "image/jpeg", upsert: true });
 
     if (uploadError) {
       return res.status(500).json({ error: uploadError.message });
     }
 
-    const { data: urlData } = supabase.storage
+    const { data: signedData, error: signError } = await supabase.storage
       .from("Avatars")
-      .getPublicUrl(filePath);
+      .createSignedUrl(filePath, 315360000); // 10 años en segundos
 
-    res.json({ url: urlData.publicUrl });
+    if (signError || !signedData) {
+      return res.status(500).json({ error: "No se pudo generar la URL de la imagen" });
+    }
+
+    res.json({ url: signedData.signedUrl });
   });
 
   // ──────────────────────────────────────────────
