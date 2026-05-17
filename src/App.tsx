@@ -8,16 +8,21 @@ import PostFeed from "./features/muro/components/PostFeed";
 import Classroom from "./features/classroom/components/Classroom";
 import Profile from "./features/profile/components/Profile";
 import AdminDashboard from "./features/admin/AdminDashboard";
+import Landing from "./features/landing/landing";
 import { View } from "./types";
 
-type AuthScreen = "login" | "register";
+type AuthScreen = "landing" | "login" | "register";
 
 function AuthGate() {
-  const [authScreen, setAuthScreen] = useState<AuthScreen>("login");
+  const [authScreen, setAuthScreen] = useState<AuthScreen>("landing");
 
   return (
     <AnimatePresence mode="wait">
-      {authScreen === "login" ? (
+      {authScreen === "landing" ? (
+        <motion.div key="landing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <Landing onViewChange={(view) => setAuthScreen(view)} />
+        </motion.div>
+      ) : authScreen === "login" ? (
         <motion.div key="login" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
           <Login onGoToRegister={() => setAuthScreen("register")} />
         </motion.div>
