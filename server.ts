@@ -2,8 +2,8 @@ import express from "express";
 import path from "path";
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = "https://gpnaanncccpbxqpooxhz.supabase.co";
-const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdwbmFhbm5jY2NwYnhxcG9veGh6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODkwNjI3MSwiZXhwIjoyMDk0NDgyMjcxfQ.xDFETKNHXhk3ofemlwDaL5Gg-XQbmpLJEC4Fp4TOnWs";
+const supabaseUrl = process.env.SUPABASE_URL!;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
