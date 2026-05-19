@@ -55,7 +55,13 @@ export default function PostCard({ post, index }: PostCardProps) {
       <div className="flex justify-between items-start mb-6">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl overflow-hidden shadow-md group-hover:rotate-3 transition-transform">
-            <img src={post.avatar} alt={post.author} className="w-full h-full object-cover" />
+            {post.avatar ? (
+              <img src={post.avatar} alt={post.author} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-lg">
+                {post.author?.[0]?.toUpperCase() ?? "U"}
+              </div>
+            )}
           </div>
           <div>
             <h4 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{post.author}</h4>

@@ -101,11 +101,17 @@ export default function Profile() {
 
         <div className="relative z-10">
           <div className="w-40 h-40 rounded-[2.5rem] overflow-hidden border-8 border-slate-50 shadow-2xl rotate-3 hover:rotate-0 transition-all duration-500 ring-1 ring-slate-200">
-            <img
-              src={isEditing ? editForm.avatar || "https://i.pravatar.cc/400?u=default" : user?.avatar ?? "https://i.pravatar.cc/400?u=default"}
-              alt={user?.name ?? "Perfil"}
-              className="w-full h-full object-cover"
-            />
+            {(isEditing ? editForm.avatar : user?.avatar) ? (
+              <img
+                src={isEditing ? editForm.avatar : user!.avatar}
+                alt={user?.name ?? "Perfil"}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-black text-5xl">
+                {user?.name?.[0]?.toUpperCase() ?? "U"}
+              </div>
+            )}
           </div>
           <div className="absolute -bottom-2 -right-2 w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center border-4 border-white shadow-lg animate-bounce">
             <Award size={24} />

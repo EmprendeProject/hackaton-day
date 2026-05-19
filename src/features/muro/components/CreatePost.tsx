@@ -17,14 +17,20 @@ export default function CreatePost({ onSubmit }: CreatePostProps) {
     }
   };
 
-  const initial = user?.name?.[0]?.toUpperCase() ?? "U";
-
   return (
     <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden flex flex-col group focus-within:ring-2 focus-within:ring-indigo-500/20 transition-all">
       <div className="p-6 flex items-center space-x-4 border-b border-slate-50">
-        <div className="w-10 h-10 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold shadow-inner">
-          {initial}
-        </div>
+        {user?.avatar ? (
+          <img
+            src={user.avatar}
+            alt={user.name ?? "Usuario"}
+            className="w-10 h-10 rounded-2xl object-cover flex-shrink-0"
+          />
+        ) : (
+          <div className="w-10 h-10 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold shadow-inner flex-shrink-0">
+            {user?.name?.[0]?.toUpperCase() ?? "U"}
+          </div>
+        )}
         <input
           value={value}
           onChange={(e) => setValue(e.target.value)}

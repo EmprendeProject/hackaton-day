@@ -53,11 +53,13 @@ export default function Layout({ children, activeView, onViewChange, onLogout }:
               onClick={() => onViewChange("profile")}
             >
               <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-500 to-purple-500 border-2 border-white shadow-md overflow-hidden flex-shrink-0">
-                <img
-                  src={user?.avatar ?? "https://i.pravatar.cc/100?u=default"}
-                  alt="Profile"
-                  className="w-full h-full object-cover"
-                />
+                {user?.avatar ? (
+                  <img src={user.avatar} alt="Profile" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-white font-bold text-lg">
+                    {user?.name?.[0]?.toUpperCase() ?? "U"}
+                  </div>
+                )}
               </div>
               <div className="min-w-0">
                 <p className="font-bold text-sm truncate">{user?.name ?? "Usuario"}</p>

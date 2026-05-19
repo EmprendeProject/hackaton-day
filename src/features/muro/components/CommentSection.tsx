@@ -35,9 +35,17 @@ export default function CommentSection({ comments, isLoading, onAddComment }: Co
         <div className="pt-6 border-t border-slate-100 space-y-4">
           {/* Input */}
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-sm flex-shrink-0">
-              {user?.name?.[0]?.toUpperCase() ?? "U"}
-            </div>
+            {user?.avatar ? (
+              <img
+                src={user.avatar}
+                alt={user.name ?? "Usuario"}
+                className="w-8 h-8 rounded-xl object-cover flex-shrink-0"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-sm flex-shrink-0">
+                {user?.name?.[0]?.toUpperCase() ?? "U"}
+              </div>
+            )}
             <div className="flex-1 flex items-center gap-2 bg-slate-50 rounded-2xl px-4 py-2">
               <input
                 value={value}
@@ -74,11 +82,17 @@ export default function CommentSection({ comments, isLoading, onAddComment }: Co
                   animate={{ opacity: 1, y: 0 }}
                   className="flex gap-3"
                 >
-                  <img
-                    src={comment.avatar ?? `https://i.pravatar.cc/40?u=${comment.author}`}
-                    alt={comment.author}
-                    className="w-8 h-8 rounded-xl object-cover flex-shrink-0"
-                  />
+                  {comment.avatar ? (
+                    <img
+                      src={comment.avatar}
+                      alt={comment.author}
+                      className="w-8 h-8 rounded-xl object-cover flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-sm flex-shrink-0">
+                      {comment.author?.[0]?.toUpperCase() ?? "U"}
+                    </div>
+                  )}
                   <div className="bg-slate-50 rounded-2xl px-4 py-3 flex-1">
                     <p className="text-xs font-black text-slate-500 mb-1">{comment.author}</p>
                     <p className="text-sm text-slate-700 font-medium leading-snug">{comment.content}</p>
