@@ -79,6 +79,6 @@ function MainApp() {
 }
 
 export default function App() {
-  const { isAuthenticated } = useAuth();
-  return isAuthenticated ? <MainApp /> : <AuthGate />;
+  const { isAuthenticated, user } = useAuth();
+  return isAuthenticated ? <MainApp key={user?.id} /> : <AuthGate />;
 }

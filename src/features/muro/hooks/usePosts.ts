@@ -4,13 +4,13 @@ import { useAuth } from "../../../context/AuthContext";
 
 const PAGE_SIZE = 10;
 
-async function fetchPage(cursor?: string): Promise<{ posts: Post[]; nextCursor: string | null }> {
-  const url = cursor
-    ? `/api/posts?limit=${PAGE_SIZE}&cursor=${encodeURIComponent(cursor)}`
-    : `/api/posts?limit=${PAGE_SIZE}`;
-  const res = await fetch(url);
+async function fetchPage(userId?: string, cursor?: string): Promise<{ posts: Post[]; nextCursor: string | null }> {
+  const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
+  if (cursor) params.set("cursor", cursor);
+  if (userId) params.set("userId", userId);
+  const res = await fetch(`/api/posts?${params}`);
   const data = await res.json();
-  if (Array.isArray(data)) return { posts: data, nextCursor: null }; // fallback
+  if (Array.isArray(data)) return { posts: data, nextCursor: null };
   return { posts: data.posts ?? [], nextCursor: data.nextCursor ?? null };
 }
 
@@ -23,21 +23,31 @@ export function usePosts() {
   const { user } = useAuth();
 
   useEffect(() => {
-    fetchPage()
+    let cancelled = false;
+
+    setPosts([]);
+    setCursor(null);
+    setHasMore(true);
+    setIsLoading(true);
+
+    fetchPage(user?.id)
       .then(({ posts, nextCursor }) => {
+        if (cancelled) return;
         setPosts(posts);
         setCursor(nextCursor);
         setHasMore(nextCursor !== null);
       })
-      .catch(console.error)
-      .finally(() => setIsLoading(false));
-  }, []);
+      .catch((err) => { if (!cancelled) console.error(err); })
+      .finally(() => { if (!cancelled) setIsLoading(false); });
+
+    return () => { cancelled = true; };
+  }, [user?.id]);
 
   const loadMore = useCallback(async () => {
     if (!hasMore || isLoadingMore || !cursor) return;
     setIsLoadingMore(true);
     try {
-      const { posts: more, nextCursor } = await fetchPage(cursor);
+      const { posts: more, nextCursor } = await fetchPage(user?.id, cursor);
       setPosts((prev) => [...prev, ...more]);
       setCursor(nextCursor);
       setHasMore(nextCursor !== null);
@@ -46,7 +56,7 @@ export function usePosts() {
     } finally {
       setIsLoadingMore(false);
     }
-  }, [hasMore, isLoadingMore, cursor]);
+  }, [hasMore, isLoadingMore, cursor, user?.id]);
 
   const createPost = async (content: string) => {
     const res = await fetch("/api/posts", {
@@ -54,6 +64,7 @@ export function usePosts() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ content, userId: user?.id }),
     });
+    if (!res.ok) return;
     const newPost = await res.json();
     setPosts((prev) => [newPost, ...prev]);
   };

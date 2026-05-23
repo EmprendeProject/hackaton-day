@@ -5,7 +5,8 @@ export interface Post {
   content: string;
   likes: number;
   comments: number;
-  timestamp: string;
+  created_at: string;
+  userHasLiked?: boolean;
   avatar: string;
   tip?: {
     title: string;

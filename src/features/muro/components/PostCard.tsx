@@ -1,10 +1,19 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Heart, MessageSquare, Share2, MoreHorizontal, Lightbulb } from "lucide-react";
 import { motion } from "motion/react";
 import { Post } from "../../../types";
 import { useAuth } from "../../../context/AuthContext";
 import { useComments } from "../hooks/useComments";
 import CommentSection from "./CommentSection";
+
+function timeAgo(dateStr: string): string {
+  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+  if (diff < 60) return "Ahora";
+  if (diff < 3600) return `Hace ${Math.floor(diff / 60)} min`;
+  if (diff < 86400) return `Hace ${Math.floor(diff / 3600)} h`;
+  if (diff < 604800) return `Hace ${Math.floor(diff / 86400)} días`;
+  return new Date(dateStr).toLocaleDateString("es-ES", { day: "numeric", month: "short" });
+}
 
 interface PostCardProps {
   key?: React.Key;
@@ -14,11 +23,28 @@ interface PostCardProps {
 
 export default function PostCard({ post, index }: PostCardProps) {
   const { user } = useAuth();
-  const [liked, setLiked] = useState(false);
+  const [liked, setLiked] = useState(post.userHasLiked ?? false);
   const [likesCount, setLikesCount] = useState(post.likes);
   const [isLiking, setIsLiking] = useState(false);
+  const [commentsCount, setCommentsCount] = useState(post.comments);
 
   const { comments, isLoading: commentsLoading, isOpen, toggle, addComment } = useComments(post.id);
+
+  useEffect(() => {
+    setLiked(post.userHasLiked ?? false);
+    setLikesCount(post.likes);
+  }, [post.id, post.userHasLiked]);
+
+  useEffect(() => {
+    if (!commentsLoading && isOpen) {
+      setCommentsCount(comments.length);
+    }
+  }, [comments.length, commentsLoading, isOpen]);
+
+  const handleAddComment = async (content: string) => {
+    await addComment(content);
+    setCommentsCount((prev) => prev + 1);
+  };
 
   const handleLike = async () => {
     if (!user || isLiking) return;
@@ -33,6 +59,7 @@ export default function PostCard({ post, index }: PostCardProps) {
         body: JSON.stringify({ userId: user.id }),
       });
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
       setLiked(data.liked);
       setLikesCount(data.likes);
     } catch {
@@ -66,7 +93,7 @@ export default function PostCard({ post, index }: PostCardProps) {
           <div>
             <h4 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{post.author}</h4>
             <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-              {post.role} • {post.timestamp ?? "Ahora"}
+              {post.role} • {timeAgo(post.created_at)}
             </p>
           </div>
         </div>
@@ -123,7 +150,7 @@ export default function PostCard({ post, index }: PostCardProps) {
           }`}
         >
           <MessageSquare size={20} />
-          <span>{isOpen ? comments.length : post.comments}</span>
+          <span>{commentsCount}</span>
         </button>
 
         <button className="ml-auto p-2 bg-slate-50 text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl transition-all">
@@ -136,7 +163,7 @@ export default function PostCard({ post, index }: PostCardProps) {
         <CommentSection
           comments={comments}
           isLoading={commentsLoading}
-          onAddComment={addComment}
+          onAddComment={handleAddComment}
         />
       )}
     </motion.article>

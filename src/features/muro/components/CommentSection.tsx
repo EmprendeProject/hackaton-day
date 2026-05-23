@@ -39,10 +39,10 @@ export default function CommentSection({ comments, isLoading, onAddComment }: Co
               <img
                 src={user.avatar}
                 alt={user.name ?? "Usuario"}
-                className="w-8 h-8 rounded-xl object-cover flex-shrink-0"
+                className="w-8 h-8 rounded-xl object-cover shrink-0"
               />
             ) : (
-              <div className="w-8 h-8 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-sm flex-shrink-0">
+              <div className="w-8 h-8 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-sm shrink-0">
                 {user?.name?.[0]?.toUpperCase() ?? "U"}
               </div>
             )}
@@ -86,10 +86,10 @@ export default function CommentSection({ comments, isLoading, onAddComment }: Co
                     <img
                       src={comment.avatar}
                       alt={comment.author}
-                      className="w-8 h-8 rounded-xl object-cover flex-shrink-0"
+                      className="w-8 h-8 rounded-xl object-cover shrink-0"
                     />
                   ) : (
-                    <div className="w-8 h-8 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-sm flex-shrink-0">
+                    <div className="w-8 h-8 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-sm shrink-0">
                       {comment.author?.[0]?.toUpperCase() ?? "U"}
                     </div>
                   )}
