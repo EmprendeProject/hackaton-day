@@ -31,9 +31,14 @@ export type View = "muro" | "classroom" | "profile" | "explore" | "admin";
 export interface Comment {
   id: string;
   post_id: string;
+  parent_id: string | null;
   user_id: string;
   author: string;
+  role: string;
   avatar: string | null;
   content: string;
   created_at: string;
+  reactions: Record<string, number>;
+  userReaction: string | null;
+  replies?: Comment[];
 }

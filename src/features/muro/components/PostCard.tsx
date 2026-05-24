@@ -16,19 +16,17 @@ function timeAgo(dateStr: string): string {
 interface PostCardProps {
   post: Post;
   index: number;
-  onToggleLike: (postId: string) => Promise<void>;
+  onToggleLike: (postId: string) => void;
   onCommentAdded: (postId: string) => void;
 }
 
 export default function PostCard({ post, index, onToggleLike, onCommentAdded }: PostCardProps) {
-  const { comments, isLoading: commentsLoading, isOpen, toggle, addComment } = useComments(post.id);
+  const { comments, totalCount, isLoading: commentsLoading, isOpen, toggle, addComment, reactToComment } = useComments(post.id);
 
-  // Cuando la sección está abierta usa el conteo real de los comentarios cargados,
-  // si está cerrada muestra el conteo que viene del servidor (posts_view).
-  const commentsCount = isOpen ? comments.length : post.comments;
+  const commentsCount = isOpen ? totalCount : post.comments;
 
-  const handleAddComment = async (content: string) => {
-    const ok = await addComment(content);
+  const handleAddComment = async (content: string, parentId?: string) => {
+    const ok = await addComment(content, parentId);
     if (ok) onCommentAdded(post.id);
   };
 
@@ -121,9 +119,11 @@ export default function PostCard({ post, index, onToggleLike, onCommentAdded }: 
       {/* Comment Section */}
       {isOpen && (
         <CommentSection
+          postId={post.id}
           comments={comments}
           isLoading={commentsLoading}
           onAddComment={handleAddComment}
+          onReact={reactToComment}
         />
       )}
     </motion.article>
