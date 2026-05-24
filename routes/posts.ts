@@ -7,7 +7,6 @@ router.get("/", async (req, res) => {
   const limit = Math.min(Number(req.query.limit) || 10, 50);
   const cursor = req.query.cursor as string | undefined;
   const userId = req.query.userId as string | undefined;
-  console.log("[GET /api/posts] userId recibido:", userId ?? "(ninguno)");
 
   let query = supabase
     .from("posts_view")
@@ -22,7 +21,6 @@ router.get("/", async (req, res) => {
   const { data, error } = await query;
 
   if (error) {
-    console.error("Error fetching posts:", error.message);
     return res.status(500).json({ error: error.message });
   }
 
@@ -36,12 +34,16 @@ router.get("/", async (req, res) => {
       .select("post_id")
       .eq("user_id", userId)
       .in("post_id", postIds);
-    if (likesError) console.error("Error fetching likes:", likesError.message);
+    if (likesError) {
+      console.error("[GET /api/posts] Error fetching likes:", likesError.message);
+    }
     likedPostIds = new Set((likes ?? []).map((l: any) => l.post_id));
   }
 
   const postsWithLiked = posts.map((p: any) => ({
     ...p,
+    likes: Number(p.likes),
+    comments: Number(p.comments),
     userHasLiked: likedPostIds.has(p.id),
   }));
 
@@ -63,21 +65,29 @@ router.post("/", async (req, res) => {
   const { data, error } = await supabase
     .from("posts")
     .insert({ user_id: userId, content: content.trim() })
-    .select("id, user_id, content, created_at")
+    .select("id")
     .single();
 
   if (error) {
-    console.error("Error creating post:", JSON.stringify(error));
     return res.status(500).json({ error: error.message });
   }
 
-  const { data: fullPost } = await supabase
+  const { data: fullPost, error: viewError } = await supabase
     .from("posts_view")
     .select("*")
     .eq("id", data.id)
     .single();
 
-  res.status(201).json(fullPost ?? data);
+  if (viewError || !fullPost) {
+    return res.status(500).json({ error: "Error fetching created post" });
+  }
+
+  res.status(201).json({
+    ...fullPost,
+    likes: 0,
+    comments: 0,
+    userHasLiked: false,
+  });
 });
 
 router.post("/:id/like", async (req, res) => {
@@ -94,27 +104,19 @@ router.post("/:id/like", async (req, res) => {
     .maybeSingle();
 
   if (existing) {
-    const { error: deleteError } = await supabase.from("post_likes").delete().eq("id", existing.id);
-    if (deleteError) {
-      console.error("[like] Error eliminando like:", deleteError);
-      return res.status(500).json({ error: deleteError.message });
-    }
+    const { error } = await supabase.from("post_likes").delete().eq("id", existing.id);
+    if (error) return res.status(500).json({ error: error.message });
   } else {
-    const { data: inserted, error: insertError } = await supabase
+    const { error } = await supabase
       .from("post_likes")
-      .insert({ post_id: id, user_id: userId })
-      .select();
-    console.log("[like] Insert resultado:", JSON.stringify({ inserted, insertError }));
-    if (insertError) {
-      return res.status(500).json({ error: insertError.message });
-    }
+      .insert({ post_id: id, user_id: userId });
+    if (error) return res.status(500).json({ error: error.message });
   }
 
-  const { count, error: countError } = await supabase
+  const { count } = await supabase
     .from("post_likes")
     .select("*", { count: "exact", head: true })
     .eq("post_id", id);
-  console.log("[like] Count resultado:", JSON.stringify({ count, countError }));
 
   res.json({ liked: !existing, likes: count ?? 0 });
 });

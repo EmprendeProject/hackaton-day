@@ -1,8 +1,6 @@
-import React, { useState, useEffect } from "react";
 import { Heart, MessageSquare, Share2, MoreHorizontal, Lightbulb } from "lucide-react";
 import { motion } from "motion/react";
 import { Post } from "../../../types";
-import { useAuth } from "../../../context/AuthContext";
 import { useComments } from "../hooks/useComments";
 import CommentSection from "./CommentSection";
 
@@ -16,59 +14,22 @@ function timeAgo(dateStr: string): string {
 }
 
 interface PostCardProps {
-  key?: React.Key;
   post: Post;
   index: number;
+  onToggleLike: (postId: string) => Promise<void>;
+  onCommentAdded: (postId: string) => void;
 }
 
-export default function PostCard({ post, index }: PostCardProps) {
-  const { user } = useAuth();
-  const [liked, setLiked] = useState(post.userHasLiked ?? false);
-  const [likesCount, setLikesCount] = useState(post.likes);
-  const [isLiking, setIsLiking] = useState(false);
-  const [commentsCount, setCommentsCount] = useState(post.comments);
-
+export default function PostCard({ post, index, onToggleLike, onCommentAdded }: PostCardProps) {
   const { comments, isLoading: commentsLoading, isOpen, toggle, addComment } = useComments(post.id);
 
-  useEffect(() => {
-    setLiked(post.userHasLiked ?? false);
-    setLikesCount(post.likes);
-  }, [post.id, post.userHasLiked]);
-
-  useEffect(() => {
-    if (!commentsLoading && isOpen) {
-      setCommentsCount(comments.length);
-    }
-  }, [comments.length, commentsLoading, isOpen]);
+  // Cuando la sección está abierta usa el conteo real de los comentarios cargados,
+  // si está cerrada muestra el conteo que viene del servidor (posts_view).
+  const commentsCount = isOpen ? comments.length : post.comments;
 
   const handleAddComment = async (content: string) => {
-    await addComment(content);
-    setCommentsCount((prev) => prev + 1);
-  };
-
-  const handleLike = async () => {
-    if (!user || isLiking) return;
-    setIsLiking(true);
-    // optimistic update
-    setLiked((prev) => !prev);
-    setLikesCount((prev) => (liked ? prev - 1 : prev + 1));
-    try {
-      const res = await fetch(`/api/posts/${post.id}/like`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      setLiked(data.liked);
-      setLikesCount(data.likes);
-    } catch {
-      // revert on error
-      setLiked((prev) => !prev);
-      setLikesCount((prev) => (liked ? prev + 1 : prev - 1));
-    } finally {
-      setIsLiking(false);
-    }
+    const ok = await addComment(content);
+    if (ok) onCommentAdded(post.id);
   };
 
   return (
@@ -130,17 +91,16 @@ export default function PostCard({ post, index }: PostCardProps) {
       {/* Actions */}
       <div className="flex items-center gap-8 pt-6 border-t border-slate-50">
         <button
-          onClick={handleLike}
-          disabled={!user}
+          onClick={() => onToggleLike(post.id)}
           className={`flex items-center gap-2 transition-all font-bold text-sm group/like ${
-            liked ? "text-red-500" : "text-slate-400 hover:text-red-500"
+            post.userHasLiked ? "text-red-500" : "text-slate-400 hover:text-red-500"
           }`}
         >
           <Heart
             size={20}
-            className={`transition-transform group-active/like:scale-125 ${liked ? "fill-red-500" : ""}`}
+            className={`transition-transform group-active/like:scale-125 ${post.userHasLiked ? "fill-red-500" : ""}`}
           />
-          <span>{likesCount}</span>
+          <span>{post.likes}</span>
         </button>
 
         <button

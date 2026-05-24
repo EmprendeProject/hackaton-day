@@ -1,18 +1,19 @@
 export interface Post {
   id: string;
+  user_id: string;
   author: string;
   role: string;
   content: string;
   likes: number;
   comments: number;
   created_at: string;
-  userHasLiked?: boolean;
+  userHasLiked: boolean;
   avatar: string;
+  tags?: string[];
   tip?: {
     title: string;
     content: string;
   };
-  tags?: string[];
 }
 
 export interface Course {
@@ -30,8 +31,9 @@ export type View = "muro" | "classroom" | "profile" | "explore" | "admin";
 export interface Comment {
   id: string;
   post_id: string;
+  user_id: string;
   author: string;
-  avatar: string;
+  avatar: string | null;
   content: string;
   created_at: string;
 }

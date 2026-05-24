@@ -1,11 +1,11 @@
-import React, { useRef, useEffect } from "react";
+import { useRef, useEffect } from "react";
 import { usePosts } from "../hooks/usePosts";
 import CreatePost from "./CreatePost";
 import PostCard from "./PostCard";
 import Spinner from "../../../shared/ui/Spinner";
 
 export default function PostFeed() {
-  const { posts, isLoading, isLoadingMore, hasMore, loadMore, createPost } = usePosts();
+  const { posts, isLoading, isLoadingMore, hasMore, loadMore, createPost, toggleLike, incrementCommentCount } = usePosts();
   const sentinelRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef(loadMore);
 
@@ -69,7 +69,13 @@ export default function PostFeed() {
         <CreatePost onSubmit={createPost} />
 
         {posts.map((post, idx) => (
-          <PostCard key={post.id} post={post} index={idx} />
+          <PostCard
+              key={post.id}
+              post={post}
+              index={idx}
+              onToggleLike={toggleLike}
+              onCommentAdded={incrementCommentCount}
+            />
         ))}
 
         {/* Sentinel: el observer dispara loadMore cuando este div entra en vista */}
