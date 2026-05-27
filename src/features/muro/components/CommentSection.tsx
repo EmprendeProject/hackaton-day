@@ -6,6 +6,66 @@ import { useAuth } from "../../../context/AuthContext";
 
 const MAX_DEPTH = 4;
 
+interface Reactor { reaction_type: string; name: string; avatar: string | null; }
+
+function CommentReactionPill({ postId, commentId, topEmojis, total, userReaction }: {
+  postId: string;
+  commentId: string;
+  topEmojis: string[];
+  total: number;
+  userReaction: string | null;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const [reactors, setReactors] = useState<Reactor[] | null>(null);
+
+  const handleMouseEnter = () => {
+    setHovered(true);
+    if (reactors === null) {
+      fetch(`/api/posts/${postId}/comments/${commentId}/reactions`)
+        .then((r) => r.json())
+        .then(setReactors)
+        .catch(() => setReactors([]));
+    }
+  };
+
+  return (
+    <div
+      className="relative ml-auto"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <span className={`flex items-center gap-0.5 text-xs font-semibold cursor-default ${userReaction ? "text-indigo-600" : "text-slate-400"}`}>
+        <span>{topEmojis.join("")}</span>
+        <span>{total}</span>
+      </span>
+
+      <AnimatePresence>
+        {hovered && reactors && reactors.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 4 }}
+            transition={{ duration: 0.12 }}
+            className="absolute bottom-6 right-0 bg-slate-800 text-white text-xs rounded-xl py-2 px-3 shadow-xl z-20 min-w-max max-w-50"
+          >
+            <div className="space-y-1.5">
+              {reactors.map((r, i) => {
+                const emoji = REACTIONS.find((rx) => rx.type === r.reaction_type)?.emoji ?? "👍";
+                return (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="truncate">{r.name}</span>
+                    <span className="ml-auto">{emoji}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 const REACTIONS = [
   { type: "like",  emoji: "👍" },
   { type: "love",  emoji: "❤️" },
@@ -42,7 +102,7 @@ interface CommentItemProps {
 function CommentItem({ postId, comment, depth, onAddComment, onReact }: CommentItemProps) {
   const { user } = useAuth();
   const [replying, setReplying] = useState(false);
-  const [showReplies, setShowReplies] = useState(true);
+  const [showReplies, setShowReplies] = useState(false);
   const [replyValue, setReplyValue] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
@@ -155,10 +215,13 @@ function CommentItem({ postId, comment, depth, onAddComment, onReact }: CommentI
           )}
 
           {totalReactions > 0 && (
-            <span className={`flex items-center gap-0.5 text-xs font-semibold ml-auto ${comment.userReaction ? "text-indigo-600" : "text-slate-400"}`}>
-              <span>{topEmojis.join("")}</span>
-              <span>{totalReactions}</span>
-            </span>
+            <CommentReactionPill
+              postId={postId}
+              commentId={comment.id}
+              topEmojis={topEmojis}
+              total={totalReactions}
+              userReaction={comment.userReaction}
+            />
           )}
         </div>
 

@@ -5,15 +5,17 @@ import path from "path";
 import authRouter from "./routes/auth";
 import postsRouter from "./routes/posts";
 import coursesRouter from "./routes/courses";
+import tagsRouter from "./routes/tags";
 
 const app = express();
 const PORT = 3000;
 
-app.use(express.json({ limit: "5mb" }));
+app.use(express.json({ limit: "20mb" }));
 
 app.use("/api/auth", authRouter);
 app.use("/api/posts", postsRouter);
 app.use("/api/courses", coursesRouter);
+app.use("/api/tags", tagsRouter);
 
 if (process.env.NODE_ENV !== "production" && !process.env.VERCEL) {
   import("vite").then(({ createServer: createViteServer }) => {

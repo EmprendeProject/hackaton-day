@@ -7,7 +7,10 @@ export interface Post {
   likes: number;
   comments: number;
   created_at: string;
-  userHasLiked: boolean;
+  userReaction: string | null;
+  reactions: Record<string, number>;
+  pinned: boolean;
+  image_url: string | null;
   avatar: string;
   tags?: string[];
   tip?: {

@@ -7,16 +7,18 @@ router.get("/", async (req, res) => {
   const limit = Math.min(Number(req.query.limit) || 10, 50);
   const cursor = req.query.cursor as string | undefined;
   const userId = req.query.userId as string | undefined;
+  const tagsParam = req.query.tags as string | undefined;
+  const tagNames = tagsParam ? tagsParam.split(",").filter(Boolean) : [];
 
   let query = supabase
     .from("posts_view")
     .select("*")
+    .order("pinned", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(limit);
 
-  if (cursor) {
-    query = query.lt("created_at", cursor);
-  }
+  if (cursor) query = query.lt("created_at", cursor);
+  if (tagNames.length > 0) query = query.overlaps("tags", tagNames);
 
   const { data, error } = await query;
 
@@ -26,25 +28,31 @@ router.get("/", async (req, res) => {
 
   const posts = data ?? [];
 
-  let likedPostIds = new Set<string>();
-  if (userId && posts.length > 0) {
+  let userReactionMap = new Map<string, string>();
+  let reactionsCountMap = new Map<string, Record<string, number>>();
+
+  if (posts.length > 0) {
     const postIds = posts.map((p: any) => p.id);
-    const { data: likes, error: likesError } = await supabase
-      .from("post_likes")
-      .select("post_id")
-      .eq("user_id", userId)
+
+    const { data: allReactions } = await supabase
+      .from("post_reactions")
+      .select("post_id, reaction_type, user_id")
       .in("post_id", postIds);
-    if (likesError) {
-      console.error("[GET /api/posts] Error fetching likes:", likesError.message);
+
+    for (const r of allReactions ?? []) {
+      const map = reactionsCountMap.get(r.post_id) ?? {};
+      map[r.reaction_type] = (map[r.reaction_type] ?? 0) + 1;
+      reactionsCountMap.set(r.post_id, map);
+      if (userId && r.user_id === userId) userReactionMap.set(r.post_id, r.reaction_type);
     }
-    likedPostIds = new Set((likes ?? []).map((l: any) => l.post_id));
   }
 
   const postsWithLiked = posts.map((p: any) => ({
     ...p,
     likes: Number(p.likes),
     comments: Number(p.comments),
-    userHasLiked: likedPostIds.has(p.id),
+    userReaction: userReactionMap.get(p.id) ?? null,
+    reactions: reactionsCountMap.get(p.id) ?? {},
   }));
 
   const nextCursor = posts.length === limit ? posts[posts.length - 1].created_at : null;
@@ -52,8 +60,21 @@ router.get("/", async (req, res) => {
   res.json({ posts: postsWithLiked, nextCursor });
 });
 
+async function uploadPostImage(imageData: string, postId: string): Promise<string | null> {
+  const matches = imageData.match(/^data:(.+);base64,(.+)$/);
+  if (!matches) return null;
+  const mimeType = matches[1];
+  const ext = mimeType.split("/")[1] ?? "jpg";
+  const buffer = Buffer.from(matches[2], "base64");
+  const filePath = `post-${postId}.${ext}`;
+  const { error } = await supabase.storage.from("Post").upload(filePath, buffer, { contentType: mimeType, upsert: true });
+  if (error) return null;
+  const { data } = supabase.storage.from("Post").getPublicUrl(filePath);
+  return data?.publicUrl ?? null;
+}
+
 router.post("/", async (req, res) => {
-  const { content, userId } = req.body;
+  const { content, userId, tagIds, imageData } = req.body;
 
   if (!content || typeof content !== "string" || content.trim() === "") {
     return res.status(400).json({ error: "El contenido es requerido" });
@@ -69,7 +90,17 @@ router.post("/", async (req, res) => {
     .single();
 
   if (error) {
+    console.error("[POST /api/posts] insert error:", error.message);
     return res.status(500).json({ error: error.message });
+  }
+
+  if (imageData) {
+    const imageUrl = await uploadPostImage(imageData, data.id);
+    if (imageUrl) await supabase.from("posts").update({ image_url: imageUrl }).eq("id", data.id);
+  }
+
+  if (Array.isArray(tagIds) && tagIds.length > 0) {
+    await supabase.from("post_tags").insert(tagIds.map((tag_id: string) => ({ post_id: data.id, tag_id })));
   }
 
   const { data: fullPost, error: viewError } = await supabase
@@ -86,39 +117,115 @@ router.post("/", async (req, res) => {
     ...fullPost,
     likes: 0,
     comments: 0,
-    userHasLiked: false,
+    userReaction: null,
+    reactions: {},
   });
 });
 
-router.post("/:id/like", async (req, res) => {
+router.delete("/:id", async (req, res) => {
   const { id } = req.params;
   const { userId } = req.body;
-
   if (!userId) return res.status(400).json({ error: "userId requerido" });
 
+  const { data: post } = await supabase.from("posts").select("user_id").eq("id", id).single();
+  if (!post) return res.status(404).json({ error: "Post no encontrado" });
+  if (post.user_id !== userId) return res.status(403).json({ error: "Sin permiso" });
+
+  const { error } = await supabase.from("posts").delete().eq("id", id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ deleted: true });
+});
+
+router.patch("/:id", async (req, res) => {
+  const { id } = req.params;
+  const { userId, content, imageData, removeImage, tagIds } = req.body;
+  if (!userId) return res.status(400).json({ error: "userId requerido" });
+  if (!content?.trim()) return res.status(400).json({ error: "Contenido requerido" });
+
+  const { data: post } = await supabase.from("posts").select("user_id").eq("id", id).single();
+  if (!post) return res.status(404).json({ error: "Post no encontrado" });
+  if (post.user_id !== userId) return res.status(403).json({ error: "Sin permiso" });
+
+  const updates: Record<string, any> = { content: content.trim() };
+
+  if (removeImage) {
+    updates.image_url = null;
+  } else if (imageData) {
+    const imageUrl = await uploadPostImage(imageData, id);
+    if (imageUrl) updates.image_url = imageUrl;
+  }
+
+  const { error } = await supabase.from("posts").update(updates).eq("id", id);
+  if (error) return res.status(500).json({ error: error.message });
+
+  if (Array.isArray(tagIds)) {
+    await supabase.from("post_tags").delete().eq("post_id", id);
+    if (tagIds.length > 0) {
+      await supabase.from("post_tags").insert(tagIds.map((tag_id: string) => ({ post_id: id, tag_id })));
+    }
+  }
+
+  const { data: updatedView } = await supabase.from("posts_view").select("tags").eq("id", id).single();
+
+  res.json({
+    updated: true,
+    content: content.trim(),
+    image_url: updates.image_url !== undefined ? updates.image_url : undefined,
+    tags: updatedView?.tags ?? undefined,
+  });
+});
+
+router.post("/:id/pin", async (req, res) => {
+  const { id } = req.params;
+  const { userId } = req.body;
+  if (!userId) return res.status(400).json({ error: "userId requerido" });
+
+  const { data: post } = await supabase.from("posts").select("user_id, pinned").eq("id", id).single();
+  if (!post) return res.status(404).json({ error: "Post no encontrado" });
+  if (post.user_id !== userId) return res.status(403).json({ error: "Sin permiso" });
+
+  const { error } = await supabase.from("posts").update({ pinned: !post.pinned }).eq("id", id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ pinned: !post.pinned });
+});
+
+router.post("/:id/react", async (req, res) => {
+  const { id } = req.params;
+  const { userId, reactionType } = req.body;
+
+  if (!userId) return res.status(400).json({ error: "userId requerido" });
+  if (!reactionType) return res.status(400).json({ error: "reactionType requerido" });
+
   const { data: existing } = await supabase
-    .from("post_likes")
-    .select("id")
+    .from("post_reactions")
+    .select("id, reaction_type")
     .eq("post_id", id)
     .eq("user_id", userId)
     .maybeSingle();
 
   if (existing) {
-    const { error } = await supabase.from("post_likes").delete().eq("id", existing.id);
-    if (error) return res.status(500).json({ error: error.message });
+    if (existing.reaction_type === reactionType) {
+      await supabase.from("post_reactions").delete().eq("id", existing.id);
+    } else {
+      await supabase.from("post_reactions").update({ reaction_type: reactionType }).eq("id", existing.id);
+    }
   } else {
-    const { error } = await supabase
-      .from("post_likes")
-      .insert({ post_id: id, user_id: userId });
-    if (error) return res.status(500).json({ error: error.message });
+    await supabase.from("post_reactions").insert({ post_id: id, user_id: userId, reaction_type: reactionType });
   }
 
-  const { count } = await supabase
-    .from("post_likes")
-    .select("*", { count: "exact", head: true })
+  const { data: counts } = await supabase
+    .from("post_reactions")
+    .select("reaction_type")
     .eq("post_id", id);
 
-  res.json({ liked: !existing, likes: count ?? 0 });
+  const reactions = (counts ?? []).reduce((acc: Record<string, number>, r: any) => {
+    acc[r.reaction_type] = (acc[r.reaction_type] ?? 0) + 1;
+    return acc;
+  }, {});
+
+  const userReaction = existing?.reaction_type === reactionType ? null : reactionType;
+
+  res.json({ reactions, userReaction });
 });
 
 function buildCommentTree(flat: any[]): any[] {
@@ -248,6 +355,41 @@ router.post("/:postId/comments/:commentId/react", async (req, res) => {
     existing?.reaction_type === reactionType ? null : reactionType;
 
   res.json({ reactions, userReaction });
+});
+
+router.get("/:postId/comments/:commentId/reactions", async (req, res) => {
+  const { commentId } = req.params;
+  const { data, error } = await supabase
+    .from("comment_reactions")
+    .select("reaction_type, user_id, profiles(name, avatar)")
+    .eq("comment_id", commentId)
+    .limit(50);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json((data ?? []).map((r: any) => ({
+    reaction_type: r.reaction_type,
+    name: r.profiles?.name ?? "Anónimo",
+    avatar: r.profiles?.avatar ?? null,
+  })));
+});
+
+router.get("/:id/reactions", async (req, res) => {
+  const { id } = req.params;
+
+  const { data, error } = await supabase
+    .from("post_reactions")
+    .select("reaction_type, user_id, profiles(name, avatar)")
+    .eq("post_id", id)
+    .limit(50);
+
+  if (error) return res.status(500).json({ error: error.message });
+
+  const result = (data ?? []).map((r: any) => ({
+    reaction_type: r.reaction_type,
+    name: r.profiles?.name ?? "Anónimo",
+    avatar: r.profiles?.avatar ?? null,
+  }));
+
+  res.json(result);
 });
 
 export default router;

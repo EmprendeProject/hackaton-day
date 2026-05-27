@@ -1,11 +1,23 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { usePosts } from "../hooks/usePosts";
 import CreatePost from "./CreatePost";
 import PostCard from "./PostCard";
 import Spinner from "../../../shared/ui/Spinner";
 
+interface TagOption { id: string; name: string; }
+
 export default function PostFeed() {
-  const { posts, isLoading, isLoadingMore, hasMore, loadMore, createPost, toggleLike, incrementCommentCount } = usePosts();
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [allTags, setAllTags] = useState<TagOption[]>([]);
+
+  useEffect(() => {
+    fetch("/api/tags").then((r) => r.json()).then(setAllTags).catch(() => {});
+  }, []);
+
+  const toggleTag = (name: string) =>
+    setSelectedTags((prev) => prev.includes(name) ? prev.filter((t) => t !== name) : [...prev, name]);
+
+  const { posts, isLoading, isLoadingMore, hasMore, loadMore, createPost, reactToPost, deletePost, editPost, pinPost, incrementCommentCount } = usePosts(selectedTags);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef(loadMore);
 
@@ -66,6 +78,34 @@ export default function PostFeed() {
 
       {/* Main Feed */}
       <div className="lg:col-span-8 space-y-6">
+        {/* Barra de filtro por tags */}
+        {allTags.length > 0 && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider shrink-0">Filtrar:</span>
+            {allTags.map((tag) => (
+              <button
+                key={tag.id}
+                onClick={() => toggleTag(tag.name)}
+                className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+                  selectedTags.includes(tag.name)
+                    ? "bg-indigo-600 text-white shadow-sm"
+                    : "bg-slate-100 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600"
+                }`}
+              >
+                #{tag.name}
+              </button>
+            ))}
+            {selectedTags.length > 0 && (
+              <button
+                onClick={() => setSelectedTags([])}
+                className="px-3 py-1.5 rounded-full text-xs font-bold text-red-400 hover:bg-red-50 transition-all"
+              >
+                Limpiar
+              </button>
+            )}
+          </div>
+        )}
+
         <CreatePost onSubmit={createPost} />
 
         {posts.map((post, idx) => (
@@ -73,7 +113,10 @@ export default function PostFeed() {
               key={post.id}
               post={post}
               index={idx}
-              onToggleLike={toggleLike}
+              onReact={reactToPost}
+              onDelete={deletePost}
+              onEdit={editPost}
+              onPin={pinPost}
               onCommentAdded={incrementCommentCount}
             />
         ))}
